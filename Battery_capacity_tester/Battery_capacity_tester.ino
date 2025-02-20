@@ -20,9 +20,10 @@ volatile int encoderValue = 0;
 int voltageSens = A0;
 int currentSens = A1;
 int relayPin = 3;
-unsigned long timeDischarging = 0;
+int timeDischarging = 0; 
 float cutOffVoltage = 2.7;
 bool btnPressed = false;
+unsigned long discharging_last = 0;
 
 int encoderPinA = 6;  // CLK pin
 int encoderPinB = 5; // DT pin
@@ -37,6 +38,7 @@ bool range5 = false;
 float average_current = 0;
 float sum_current = 0;
 int meas_count = 0;
+float battery_capacity = 0;
 
 
 void setup()
@@ -69,23 +71,56 @@ void setup()
 
 int measurmentDelay = 2000;
 unsigned long lastMillis = millis();
+bool running = false;
+bool first = true;
+bool measurmentFinished = false;
 
 void loop() 
 {
-  if(millis()- lastMillis > measurmentDelay){
-    voltage = getVoltage(range5);
-    current = getCurrent();
-    sum_current = sum_current + current;
-    meas_count++;
-    lastMillis = millis();
+  while(running){
+    if(current > 0.01){
+      if(millis() - lastMillis > measurmentDelay){
+        voltage = getVoltage(range5);
+        current = getCurrent();
+        sum_current = sum_current + current;
+        meas_count++;
+        displayMeasurementActive(current, voltage, timeDischarging);
+        lastMillis = millis();
+      }
+      sec_timer();
+    }
+    else{
+      discharging_last = millis();
+    }
+    if(voltage < cutOffVoltage){
+      measurmentFinished = true;
+      digitalWrite(relayPin, LOW);
+      running = false;
+      count = 0;
+    }
+    checkEncoder();
   }
-  displayMeasurement(current, voltage);
+  if(measurmentFinished){
+    if (meas_count != 0){
+      average_current = sum_current / meas_count;
+    }
+    battery_capacity = (average_current * timeDischarging) / 3600;
+    Serial.print(battery_capacity);
+    displayCapacity(battery_capacity);
+  }
+  else{
+    discharging_last = millis();
+    if(millis()- lastMillis > measurmentDelay){
+      voltage = getVoltage(range5);
+      current = getCurrent();
+      displayMeasurement(current, voltage);
+      lastMillis = millis();
+    }
+  }
   checkEncoder();
-  if(current < 0.01){
-
-  }
-  if(voltage < cutOffVoltage){
-    digitalWrite(relayPin, LOW);
-    average_current = sum_current / meas_count;
+  if(count == 10){
+    running = true;
+    timeDischarging = 0;
+    count = 0;
   }
 }

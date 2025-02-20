@@ -17,3 +17,10 @@ float getCurrent() {
   Serial.println(current);
   return current*2;  // Return current in Amps (A)
 }
+
+void sec_timer(){
+  if (millis() - discharging_last > 1000){
+    timeDischarging = timeDischarging + 1;
+    discharging_last = millis();
+  }
+}

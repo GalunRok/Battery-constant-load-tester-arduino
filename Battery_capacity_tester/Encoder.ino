@@ -17,6 +17,7 @@ void checkEncoder() {
         Serial.print("Counter-Clockwise | ");
       }
       Serial.print(count);
+      displayCount(count);
       Serial.print(" | ");
   }
   encoderPinA_prev = encoderPinA_value;
@@ -24,6 +25,9 @@ void checkEncoder() {
   if (digitalRead(encoderBtn) == LOW){
     btnPressed = false;
     Serial.print("BTN ON");
+    running = false;
+    digitalWrite(relayPin, HIGH);
+    measurmentFinished = false;
   } 
   else {
     btnPressed = true;
